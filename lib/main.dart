@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'providers/movie_provider.dart';
-import 'screens/movie_list_screen.dart';
+import 'logic/providers/movie_provider.dart';
+import 'ui/screens/movie_list_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: "FILM_API_KEY");
   runApp(const MyApp());
 }
 

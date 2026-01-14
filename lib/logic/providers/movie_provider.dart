@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:film_app/models/movie.dart';
-import 'package:film_app/services/movie_service.dart';
+import 'package:film_app/data/models/movie.dart';
+import 'package:film_app/data/services/movie_service.dart';
+import 'package:film_app/data/models/movie_details.dart';
 
 class MovieProvider extends ChangeNotifier {
-  final TMDbService _service = TMDbService();
+  final MovieService _service = MovieService();
 
   List<Movie> _popularMovies = [];
   List<Movie> _topRatedMovies = [];
   List<Movie> _nowPlayingMovies = [];
-  final List<Movie> _searchResults = [];
+  List<Movie> _searchResults = [];
 
   bool _isLoading = false;
   String? _error;
@@ -38,9 +39,7 @@ class MovieProvider extends ChangeNotifier {
   void setTab(int index) {
     _selectedTab = index;
     notifyListeners();
-    if (currentMovies.isEmpty) {
-      loadMovies();
-    }
+    if (currentMovies.isEmpty) loadMovies();
   }
 
   Future<void> loadMovies() async {
@@ -74,19 +73,15 @@ class MovieProvider extends ChangeNotifier {
 
   Future<void> searchMovies(String query) async {
     if (query.isEmpty) {
-      _searchResults.clear();
+      _searchResults = [];
       notifyListeners();
       return;
     }
-
     _isLoading = true;
     _error = null;
     notifyListeners();
-
     try {
-      final results = await _service.searchMovies(query);
-      _searchResults.clear();
-      _searchResults.addAll(results);
+      _searchResults = await _service.searchMovies(query);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -96,7 +91,7 @@ class MovieProvider extends ChangeNotifier {
   }
 
   void clearSearch() {
-    _searchResults.clear();
+    _searchResults = [];
     notifyListeners();
   }
 }

@@ -1,0 +1,50 @@
+class Movie {
+  final int id;
+  final String title;
+  final String? posterPath;
+  final String? backdropPath;
+  final String overview;
+  final double voteAverage;
+  final String releaseDate;
+  final List<int> genreIds;
+
+  Movie({
+    required this.id,
+    required this.title,
+    this.posterPath,
+    this.backdropPath,
+    required this.overview,
+    required this.voteAverage,
+    required this.releaseDate,
+    required this.genreIds,
+  });
+
+  factory Movie.fromJson(Map<String, dynamic> json) {
+    return Movie(
+      id: json['id'],
+      title: json['title'] ?? json['original_title'] ?? 'Без названия',
+      posterPath: json['poster_path'],
+      backdropPath: json['backdrop_path'],
+      overview: json['overview'] ?? 'Описание отсутствует',
+      voteAverage: (json['vote_average'] ?? 0).toDouble(),
+      releaseDate: json['release_date'] ?? '',
+      genreIds: List<int>.from(json['genre_ids'] ?? []),
+    );
+  }
+
+  String get posterUrl =>
+      posterPath != null ? 'https://image.tmdb.org/t/p/w500$posterPath' : '';
+
+  String get backdropUrl => backdropPath != null
+      ? 'https://image.tmdb.org/t/p/w780$backdropPath'
+      : '';
+
+  String get year {
+    if (releaseDate.isEmpty) return 'N/A';
+    try {
+      return releaseDate.split('-')[0];
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+}

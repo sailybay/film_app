@@ -1,11 +1,13 @@
-import 'package:film_app/core/utils/responsive_util.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:film_app/data/models/movie.dart';
 import 'package:film_app/ui/screens/movie_detail_screen.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:film_app/core/utils/responsive_util.dart';
+import 'package:film_app/ui/widgets/rating_badge.dart';
 
 class MovieCard extends StatelessWidget {
   final Movie movie;
+
   const MovieCard({super.key, required this.movie});
 
   @override
@@ -25,10 +27,12 @@ class MovieCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ===== Poster + Rating =====
             Expanded(
               child: Stack(
                 fit: StackFit.expand,
                 children: [
+                  // Плакат фильма
                   movie.posterUrl.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: movie.posterUrl,
@@ -48,39 +52,23 @@ class MovieCard extends StatelessWidget {
                           color: Colors.grey[800],
                           child: const Icon(Icons.movie, size: 64),
                         ),
+
+                  // Рейтинг (только на десктопе сверху)
                   if (isDesktop)
                     Positioned(
                       top: 8,
                       right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Colors.orange,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              movie.voteAverage.toStringAsFixed(1),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: RatingBadge(
+                        rating: movie.voteAverage,
+                        fontSize: 12,
+                        iconSize: 14,
                       ),
                     ),
                 ],
               ),
             ),
+
+            // ===== Title + Rating (мобильная версия) =====
             Padding(
               padding: EdgeInsets.all(isDesktop ? 12 : 8),
               child: Column(
@@ -99,14 +87,11 @@ class MovieCard extends StatelessWidget {
                   if (!isDesktop)
                     Row(
                       children: [
-                        const Icon(Icons.star, color: Colors.orange, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          movie.voteAverage.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                        RatingBadge(
+                          rating: movie.voteAverage,
+                          fontSize: 14,
+                          iconSize: 16,
+                          backgroundColor: Colors.transparent,
                         ),
                         const Spacer(),
                         Text(

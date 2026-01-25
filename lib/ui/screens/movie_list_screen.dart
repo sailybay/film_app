@@ -1,7 +1,8 @@
-import 'package:film_app/core/utils/responsive_util.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:film_app/logic/providers/movie_provider.dart';
+import 'package:film_app/core/utils/responsive_util.dart';
+import 'package:film_app/logic/providers/movie_list_provider.dart';
+import 'package:film_app/logic/providers/search_provider.dart';
 import 'package:film_app/ui/widgets/movie_card.dart';
 
 class MovieListScreen extends StatefulWidget {
@@ -19,7 +20,10 @@ class _MovieListScreenState extends State<MovieListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<MovieProvider>(context, listen: false).loadMovies();
+      final provider = Provider.of<MovieListProvider>(context, listen: false);
+      if (provider.currentMovies.isEmpty && !provider.isLoading) {
+        provider.loadMovies();
+      }
     });
   }
 
@@ -29,8 +33,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
     super.dispose();
   }
 
-  // ------------------- _buildTab -------------------
-  Widget _buildTab(int index, String title, MovieProvider provider) {
+  Widget _buildTab(int index, String title, MovieListProvider provider) {
     final isSelected = provider.selectedTab == index;
     return Expanded(
       child: GestureDetector(
@@ -59,13 +62,21 @@ class _MovieListScreenState extends State<MovieListScreen> {
     );
   }
 
-  // ------------------- _buildContent -------------------
-  Widget _buildContent(MovieProvider provider) {
-    if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  Widget _buildContent(
+    MovieListProvider listProvider,
+    SearchProvider searchProvider,
+  ) {
+    final movies = _isSearching
+        ? searchProvider.results
+        : listProvider.currentMovies;
+    final isLoading = _isSearching
+        ? searchProvider.isLoading
+        : listProvider.isLoading;
+    final error = _isSearching ? searchProvider.error : listProvider.error;
 
-    if (provider.error != null) {
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+
+    if (error != null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -80,13 +91,19 @@ class _MovieListScreenState extends State<MovieListScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                provider.error!,
+                error,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: () => provider.loadMovies(),
+                onPressed: () {
+                  if (_isSearching) {
+                    searchProvider.search(_searchController.text);
+                  } else {
+                    listProvider.loadMovies();
+                  }
+                },
                 icon: const Icon(Icons.refresh),
                 label: const Text('Повторить'),
               ),
@@ -95,10 +112,6 @@ class _MovieListScreenState extends State<MovieListScreen> {
         ),
       );
     }
-
-    final movies = _isSearching
-        ? provider.searchResults
-        : provider.currentMovies;
 
     if (movies.isEmpty) {
       return Center(
@@ -141,9 +154,10 @@ class _MovieListScreenState extends State<MovieListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<MovieProvider>(context);
+    final listProvider = Provider.of<MovieListProvider>(context);
+    final searchProvider = Provider.of<SearchProvider>(context);
+
     final isDesktop = ResponsiveUtil.isDesktop(context);
-    final isTablet = ResponsiveUtil.isTablet(context);
 
     return Scaffold(
       drawer: Drawer(
@@ -160,53 +174,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
             ListTile(
               leading: const Icon(Icons.home),
               title: const Text('Главная'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.movie),
-              title: const Text('Фильмы на вечер'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: const Text('О приложении'),
-              onTap: () {
-                Navigator.pop(context);
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('О приложении'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Размер экрана: ${MediaQuery.of(context).size.width.toInt()}px',
-                        ),
-                        Text(
-                          'Тип: ${isDesktop
-                              ? 'Desktop'
-                              : isTablet
-                              ? 'Tablet'
-                              : 'Mobile'}',
-                        ),
-                        Text('Фильмов: ${provider.currentMovies.length}'),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              onTap: () => Navigator.pop(context),
             ),
           ],
         ),
@@ -227,15 +195,12 @@ class _MovieListScreenState extends State<MovieListScreen> {
                           icon: const Icon(Icons.clear, color: Colors.white54),
                           onPressed: () {
                             _searchController.clear();
-                            provider.clearSearch();
+                            searchProvider.clear();
                           },
                         )
                       : null,
                 ),
-                onChanged: (value) {
-                  setState(() {});
-                  provider.searchMovies(value);
-                },
+                onChanged: (value) => searchProvider.search(value),
               )
             : const Text('🎬 Кинопоиск'),
         actions: [
@@ -246,7 +211,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
                 _isSearching = !_isSearching;
                 if (!_isSearching) {
                   _searchController.clear();
-                  provider.clearSearch();
+                  searchProvider.clear();
                 }
               });
             },
@@ -257,8 +222,8 @@ class _MovieListScreenState extends State<MovieListScreen> {
         children: [
           if (isDesktop)
             NavigationRail(
-              selectedIndex: provider.selectedTab,
-              onDestinationSelected: (index) => provider.setTab(index),
+              selectedIndex: listProvider.selectedTab,
+              onDestinationSelected: (index) => listProvider.setTab(index),
               backgroundColor: const Color(0xFF2A2A2A),
               labelType: NavigationRailLabelType.all,
               destinations: const [
@@ -284,13 +249,13 @@ class _MovieListScreenState extends State<MovieListScreen> {
                     color: const Color(0xFF2A2A2A),
                     child: Row(
                       children: [
-                        _buildTab(0, 'Популярные', provider),
-                        _buildTab(1, 'Топ 250', provider),
-                        _buildTab(2, 'Новинки', provider),
+                        _buildTab(0, 'Популярные', listProvider),
+                        _buildTab(1, 'Топ 250', listProvider),
+                        _buildTab(2, 'Новинки', listProvider),
                       ],
                     ),
                   ),
-                Expanded(child: _buildContent(provider)),
+                Expanded(child: _buildContent(listProvider, searchProvider)),
               ],
             ),
           ),

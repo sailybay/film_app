@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'logic/providers/movie_provider.dart';
+import 'logic/providers/movie_list_provider.dart';
+import 'logic/providers/movie_detail_provider.dart';
+import 'logic/providers/search_provider.dart';
 import 'ui/screens/movie_list_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "FILM_API_KEY");
+  await dotenv.load(fileName: "assets/config/.env");
   runApp(const MyApp());
 }
 
@@ -15,8 +17,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => MovieProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MovieListProvider()),
+        ChangeNotifierProvider(create: (_) => MovieDetailProvider()),
+        ChangeNotifierProvider(create: (_) => SearchProvider()),
+      ],
       child: MaterialApp(
         title: 'Кинопоиск Clone',
         debugShowCheckedModeBanner: false,
